@@ -14,6 +14,8 @@ public class RpcResponse<T> implements Serializable {
     private CommonCode responseCode;
     //响应数据或异常信息
     private T data;
+    //指明是对哪个请求的响应
+    private String requestId;
 
     public static <T> RpcResponse<T> success(T data){
         RpcResponse<T> response = new RpcResponse<>();
@@ -50,5 +52,13 @@ public class RpcResponse<T> implements Serializable {
 
     public void setData(T data) {
         this.data = data;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 }

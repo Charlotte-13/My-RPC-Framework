@@ -24,9 +24,15 @@ public class NettyClientHandler extends SimpleChannelInboundHandler<RpcResponse>
                 channelHandlerContext.writeAndFlush(request);
             }else {
                 logger.info(String.format("客户端接收到消息: %s", rpcResponse.getResponseCode().getMsg()));
-                AttributeKey<RpcResponse> key = AttributeKey.valueOf("rpcResponse");
+                //同步回调
+                /*AttributeKey<RpcResponse> key = AttributeKey.valueOf("rpcResponse");
                 channelHandlerContext.channel().attr(key).set(rpcResponse);
-                channelHandlerContext.channel().close();
+                channelHandlerContext.channel().close();*/
+                //异步回调
+                RequestCallBack callBack = RequestCallBack.getInstance(rpcResponse.getRequestId());
+                if(callBack!=null){
+                    callBack.complete(rpcResponse);
+                }
             }
         }finally {
             ReferenceCountUtil.release(rpcResponse);

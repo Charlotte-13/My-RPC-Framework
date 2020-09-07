@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class CommonDecoder extends ReplayingDecoder {
+public class CommonDecoder extends ReplayingDecoder<Void> {
     private static final Logger logger = LoggerFactory.getLogger(CommonDecoder.class);
     private static final int MAGIC_NUMBER = 0xCAFEBABE;
     @Override

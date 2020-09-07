@@ -47,7 +47,7 @@ public class NettyServerHandler extends SimpleChannelInboundHandler<RpcRequest> 
             if(channelHandlerContext.channel().isActive()&&channelHandlerContext.channel().isWritable()){
                 //write+flush，将调用方法后得到的返回数据写入缓存，并刷新到管道中。该数据是编码后发送的
                 ChannelFuture future = channelHandlerContext.writeAndFlush(rpcResponse);
-                future.addListener(ChannelFutureListener.CLOSE);
+                //future.addListener(ChannelFutureListener.CLOSE);
             }else {
                 logger.error("通道不可写");
             }

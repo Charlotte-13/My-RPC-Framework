@@ -35,7 +35,7 @@ public class NacosConnector {
     }
 
     public static void registerService(String serviceName, InetSocketAddress inetSocketAddress) throws NacosException {
-        namingService.registerInstance(serviceName,inetSocketAddress.getHostName(),inetSocketAddress.getPort());
+        namingService.registerInstance(serviceName,inetSocketAddress.getAddress().getHostAddress(),inetSocketAddress.getPort());
         serviceNames.add(serviceName);
         address = inetSocketAddress;
     }

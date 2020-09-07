@@ -2,10 +2,15 @@ package cn.hlh.rpc.transport;
 
 import cn.hlh.rpc.entity.RpcRequest;
 import cn.hlh.rpc.entity.RpcResponse;
+import cn.hlh.rpc.enumeration.EmRpcError;
+import cn.hlh.rpc.enumeration.ResponseCode;
+import cn.hlh.rpc.exception.RpcException;
+import cn.hlh.rpc.transport.netty.client.RequestCallBack;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.util.UUID;
 
 public class RpcClientProxy implements InvocationHandler {
     private RpcClient rpcClient;
@@ -24,6 +29,13 @@ public class RpcClientProxy implements InvocationHandler {
         request.setParameters(args);
         request.setParamType(method.getParameterTypes());
         request.setHeartBeat(false);
-        return ((RpcResponse)rpcClient.sendRequest(request)).getData();
+        request.setRequestId(UUID.randomUUID().toString());
+        RequestCallBack callBack = (RequestCallBack) rpcClient.sendRequest(request);
+        RpcResponse response = callBack.start();
+        if(response.getResponseCode()==ResponseCode.SUCCESS){
+            return response.getData();
+        }else {
+            throw new RpcException(EmRpcError.UNKNOWN_ERROR);
+        }
     }
 }

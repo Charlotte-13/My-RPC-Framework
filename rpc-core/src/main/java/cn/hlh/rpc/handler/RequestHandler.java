@@ -17,6 +17,7 @@ public class RequestHandler {
         RpcResponse<T> response = null;
         try {
             response = invokeMethod(request,service);
+            response.setRequestId(request.getRequestId());
             logger.info("服务:{} 成功调用方法:{}", request.getInterfaceName(), request.getMethodName());
         } catch (IllegalAccessException | InvocationTargetException e) {
             logger.error("调用或发送时有错误发生：", e);

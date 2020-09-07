@@ -4,7 +4,10 @@ import cn.hlh.rpc.codec.CommonDecoder;
 import cn.hlh.rpc.codec.CommonEncoder;
 import cn.hlh.rpc.entity.RpcRequest;
 import cn.hlh.rpc.entity.RpcResponse;
+import cn.hlh.rpc.enumeration.EmRpcError;
+import cn.hlh.rpc.enumeration.ResponseCode;
 import cn.hlh.rpc.enumeration.SerializerCode;
+import cn.hlh.rpc.exception.RpcException;
 import cn.hlh.rpc.factory.SingletonFactory;
 import cn.hlh.rpc.registry.ServiceDiscoverer;
 import cn.hlh.rpc.registry.nacos.NacosServiceDiscoverer;
@@ -22,6 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -58,49 +62,48 @@ public class NettyClient implements RpcClient {
     }
     @Override
     public Object sendRequest(RpcRequest request) {
-        try{
-            Channel channel = getChannel(request);
-            //向服务端发送请求，并监听请求是否成功发送
-            if(channel!=null){
-                channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture channelFuture) throws Exception {
-                        if(channelFuture.isSuccess()){
-                            logger.info(String.format("客户端发送消息: %s", request.getMethodName()));
-                        }else {
-                            logger.error("发送消息时有错误发生: ",channelFuture.cause());
-                        }
+        Channel channel = getChannel(request);
+        //向服务端发送请求，并监听请求是否成功发送
+        if(channel!=null){
+            channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
+                @Override
+                public void operationComplete(ChannelFuture channelFuture) throws Exception {
+                    if(channelFuture.isSuccess()){
+                        logger.info(String.format("客户端发送消息: %s", request.getMethodName()));
+                    }else {
+                        logger.error("发送消息时有错误发生: ",channelFuture.cause());
                     }
-                });
-                //对关闭通道进行监听
-                channel.closeFuture().sync();
-                System.out.println(channel.closeFuture().isSuccess());
-                //通过 AttributeKey 的方式阻塞获得返回结果
-                AttributeKey<RpcResponse> key = AttributeKey.valueOf("rpcResponse");
-                RpcResponse rpcResponse = channel.attr(key).get();
-                return rpcResponse;
-            }
-        } catch (InterruptedException e) {
-            logger.error("发送消息时有错误发生: ", e);
-            e.printStackTrace();
+                }
+            });
+            //同步调用
+            /*//对关闭通道进行监听
+            channel.closeFuture().sync();
+            System.out.println(channel.closeFuture().isSuccess());
+            //通过 AttributeKey 的方式阻塞获得返回结果
+            AttributeKey<RpcResponse> key = AttributeKey.valueOf("rpcResponse");
+            RpcResponse rpcResponse = channel.attr(key).get();*/
+            //异步调用
+            RequestCallBack callBack = new RequestCallBack(request);
+            return callBack;
+        }else {
+            return RpcResponse.fail(new RpcException(EmRpcError.SERVICE_NOT_FOUND), ResponseCode.CLASS_NOT_FOUND);
         }
-        return null;
     }
 
     private Channel getChannel(RpcRequest request) {
         boolean connectFlag = false;
         while (!connectFlag){
             InetSocketAddress inetSocketAddress = serviceDiscoverer.lookupService(request.getInterfaceName());
-            if(channelMap.containsKey(inetSocketAddress.toString())){
-                Channel channel = channelMap.get(inetSocketAddress.toString());
+            String key = inetSocketAddress.getAddress().getHostAddress()+":"+inetSocketAddress.getPort();
+            if(channelMap.containsKey(key)){
+                Channel channel = channelMap.get(key);
                 if(channel!=null&&channel.isActive()){
                     return channel;
-                }else {
-                    connectFlag = doConnect(inetSocketAddress,serializerCode,1);
-                    if(connectFlag){
-                        return channelMap.get(inetSocketAddress.toString());
-                    }
                 }
+            }
+            connectFlag = doConnect(inetSocketAddress,serializerCode,1);
+            if(connectFlag){
+                return channelMap.get(key);
             }
         }
         return null;
@@ -143,7 +146,7 @@ public class NettyClient implements RpcClient {
                             return;
                         }
                     }else {
-                        logger.info("客户端连接到服务器 {}:{}",inetSocketAddress.getHostName(),inetSocketAddress.getPort());
+                        logger.info("客户端连接到服务器 {}:{}",inetSocketAddress.getAddress().getHostAddress(),inetSocketAddress.getPort());
                     }
                 }
             }).sync();
@@ -151,7 +154,8 @@ public class NettyClient implements RpcClient {
             logger.error("连接服务器时有错误发生：",e);
         }
         if(future.isSuccess()){
-            channelMap.put(inetSocketAddress.toString(), future.channel());
+            String key = inetSocketAddress.getAddress().getHostAddress()+":"+inetSocketAddress.getPort();
+            channelMap.put(key, future.channel());
             return true;
         }else {
             return false;

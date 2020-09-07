@@ -21,6 +21,17 @@ public class RpcRequest implements Serializable {
     //心跳包标识
     private boolean heartBeat;
 
+    //请求id，用于和调用响应匹配，实现异步调用
+    private String requestId;
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
+    }
+
     public boolean isHeartBeat() {
         return heartBeat;
     }
